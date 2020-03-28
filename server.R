@@ -1,8 +1,9 @@
-# FALSE DISCOVERY, REPORTING PROTOCOLS, AND REDEFINING STATISTICAL SIGNIFICANCE
+# Reporting Protocols and the Reliability of Scientific Findings
 # << SERVER >>
 # by Aydin Mohseni
 
 # Load packages
+library(shiny)
 library(ggplot2)
 library(pwr)
 
