@@ -5,8 +5,8 @@ account: amohseni
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 2010437
-bundleId: 2934691
+bundleId: 3158864
 url: https://amohseni.shinyapps.io/Reporting-Protocols-and-the-Reliability-of-Science/
-when: 1585360968.54394
+when: 1589745100.2608
 asMultiple: FALSE
 asStatic: FALSE

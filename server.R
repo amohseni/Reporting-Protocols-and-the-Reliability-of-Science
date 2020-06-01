@@ -4,7 +4,9 @@
 
 # Load packages
 library(shiny)
+library(shinyEventLogger)
 library(ggplot2)
+library(ggthemes)
 library(pwr)
 
 shinyServer(function(input, output, session) {
@@ -41,7 +43,7 @@ shinyServer(function(input, output, session) {
         y <-
           (1 - beta) * br # true discoveries = Pr(significant | H_1) * Pr(H_1)
         z <-
-          x / (x + y) # false discovery rate = false discoveries / (false discoveries + true discoveries)
+          x / (x + y) # false discovery rate = false discoveries / all discoveries
         return(z)
       } else {
         # If alpha = 0, there are no discoveries, true or false
@@ -53,7 +55,7 @@ shinyServer(function(input, output, session) {
     funFDRn <-
       function(alpha) {
         # First, compute the expected Type II error for the test
-        beta <- 1 - pwr.t.test(n = 30,
+        beta <- 1 - pwr.t.test(n = n,
                                d = d,
                                sig.level = alpha)$power
         # The net false discovery rate of the protocol is a weighted mixture of the false discovery rate for each prediction and for HARKing.
@@ -80,7 +82,7 @@ shinyServer(function(input, output, session) {
     # Compute the net false discovery rate for various values of alpha
     alphaVec <- seq(from = 0, to = 1, by = 0.01)
     FDRp <- sapply(alphaVec, funFDR, br = brPrediction)
-    FDRh <- sapply(alphaVec, funFDR, br = brHARKing)
+    FDRh <- (1 - 1 / N) * sapply(alphaVec, funFDR, br = brHARKing) + (1 / N) * FDRp
     FDRn <- sapply(alphaVec, funFDRn)[1,]
     # Here we check if all of the outputs are behaving as expected
     sVec <- sapply(alphaVec, funFDRn)[2,]
@@ -90,9 +92,9 @@ shinyServer(function(input, output, session) {
     
     # Produce the data frame of the false discovery rates to use in graphing
     # dataLabels <- c("FDR(p)", "FDR(h)", "FDR(fh)")
-    dataLabels <- c("FDR(fh)", "FDR(p)")
+    dataLabels <- c("FDR(h)", "FDR(fh)", "FDR(p)")
     # data <- c(FDRn, FDRh, FDRp)
-    data <- c(FDRn, FDRp)
+    data <- c(FDRh, FDRn, FDRp)
     group <- rep(dataLabels, each = length(alphaVec))
     df <-
       data.frame(data = matrix(c(
@@ -117,25 +119,25 @@ shinyServer(function(input, output, session) {
     G <- ggplot(df) +
       geom_line(
         data = df,
-        size = 1,
+        size = 2,
         aes(
           x = Alpha,
           y = FDR,
-          linetype = group,
-          color = group
+          #linetype = Group,
+          color = Group
         ),
         alpha = 1
       ) +
       theme_minimal() +
       ggtitle("") +
       labs(x = expression(paste("Significance Threshold ", alpha)), y = "False Discovery Rate") +
-      scale_linetype_manual(
-        values = c("solid", "solid"),
-        labels = c("Fallback \nHARKing", "Prediction")
-      ) +
+      # scale_linetype_manual(
+      #   values = c("solid", "solid", "solid"),
+      #   labels = c("Fallback \nHARKing", "Prediction", "Pure \nHARKing")
+      # ) +
       scale_color_manual(
-        values = c("orangered2", "black"),
-        labels = c("Fallback \nHARKing", "Prediction")
+        values = c("orangered2", "#3475BC", "black"),
+        labels = c("Pure \nHARKing", "Fallback \nHARKing", "Prediction")
       ) +
       scale_x_continuous(limits = c(0, 1)) +
       # scale_y_continuous(limits = c(0, 0.3)) +
