@@ -16,14 +16,14 @@ shinyServer(function(input, output, session) {
     brPrediction <-
       as.numeric(input$baseRateOfPrediction) # the base rate for true hypotheses selected via prediction
     brHARKing <- as.numeric(input$baseRateOfHarking) # the base rate for true hypotheses selected via HARKing
-    alpha <- 0.05 # the type I error rate of statistical tests
+    #alpha <- 0.05 # the type I error rate of statistical tests
     d <- as.numeric(input$effectSize) # the average effect size for difference of means in terms of Cohen's d
     n <- as.numeric(input$sampleSize) # the average sample size for studies
     
     # We model the effect of changing the conventional threshold
     # for statistical signficance on the false discovery rate of a literature.
     
-    # A literature consists in a unite mass of studies.
+    # A literature consists in a unit mass of studies.
     # A study consists of gathering data against which a set of N logically independent hypotheses may be tested
     
     # One descriptive protocol researchers may follow is: `fallback HARKing'
