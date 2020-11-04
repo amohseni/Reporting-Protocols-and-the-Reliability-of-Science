@@ -32,7 +32,7 @@ shinyServer(function(input, output, session) {
     # Define a function to compute the false discovery rate (FDR) for each protocol
     funFDR <- function(alpha, br) {
       # First, compute the expected Type II error for the test
-      beta <- 1 - pwr.t.test(n = 30,
+      beta <- 1 - pwr.t.test(n = n,
                              d = d,
                              sig.level = alpha)$power
       # If alpha = 0, there are no discoveries, true or false, so we add this conditional to avoid dividing by zero
@@ -47,6 +47,28 @@ shinyServer(function(input, output, session) {
         return(z)
       } else {
         # If alpha = 0, there are no discoveries, true or false
+        return(0) #
+      }
+    }
+    
+    # Define a function to compute the false omission rate (FOR) for each protocol
+    funFOR <- function(alpha, br) {
+      # First, compute the expected Type II error for the test
+      beta <- 1 - pwr.t.test(n = n,
+                             d = d,
+                             sig.level = alpha)$power
+      # If alpha = 1, there are no omission, true or false, so we add this conditional to avoid dividing by zero
+      if (alpha != 1) {
+        # The false omission rate of a protocol is given by the fraction of false discoveries over all discoveries.
+        u <-
+          beta * br # false omissions = Pr(non-significant | H_1) * Pr(H_1)
+        v <-
+          (1 - alpha) * (1 - br) # true omissions = Pr(non-significant | H_0) * Pr(H_0)
+        w <-
+          u / (u + v) # false discovery rate = false discoveries / all discoveries
+        return(w)
+      } else {
+        # If alpha = 1, there are no omissions, true or false
         return(0) #
       }
     }
@@ -79,51 +101,104 @@ shinyServer(function(input, output, session) {
         return(c(t, s, r)) # return the aggreatate FDR, the weight of prediction, and the discovery rate for HARKing
       }
     
+    # Define a function to compute the magnitude exaggeration ratio (MER) for the literature
+    funMER <- function(alpha, FDR) {
+      if (alpha == 0) {
+        return(1)
+      } else {
+        dTrue <-
+          FDR * 0 + (1 - FDR) * d # The true mean effect size of findings
+        dCrit <- qnorm(
+          p = alpha,
+          mean = 0,
+          sd = 1,
+          lower.tail = FALSE
+        ) # The mean critical value of tests
+        dReportedTrue <-
+          integrate(function(x)
+            x * dnorm(x, mean = d), dCrit, Inf)[[1]] / (1 - pnorm(dCrit, mean = d)) # mean effect size of true effects that cross significance threshold
+        dReportedFalse <-
+          integrate(function(x)
+            x * dnorm(x, mean = 0), dCrit, Inf)[[1]] /  (1 - pnorm(dCrit, mean = 0)) # mean effect size of false effects that cross significance threshold
+        dReported <-
+          FDR * dReportedTrue + (1 - FDR) * dReportedFalse # weighted mean of true and false effect sizes that cross the signficance treshold
+        return(dReported / dTrue) # Ratio of mean reported to true mean effects sizes
+      }
+    }
+    
     # Compute the net false discovery rate for various values of alpha
     alphaVec <- seq(from = 0, to = 1, by = 0.01)
     FDRp <- sapply(alphaVec, funFDR, br = brPrediction)
     FDRh <- (1 - 1 / N) * sapply(alphaVec, funFDR, br = brHARKing) + (1 / N) * FDRp
     FDRn <- sapply(alphaVec, funFDRn)[1,]
-    # Here we check if all of the outputs are behaving as expected
-    sVec <- sapply(alphaVec, funFDRn)[2,]
-    print(sVec) # the fraction of findings contributed via prediction
-    rVec <- sapply(alphaVec, funFDRn)[3,]
-    print(rVec) # the findings rate of HARking
+    
+    # Compute the net false omiision rate for various values of alpha
+    FORp <- sapply(alphaVec, funFOR, br = brPrediction)
+    FORh <- sapply(alphaVec, funFOR, br = brHARKing)
+    FORn <- (1 - 1 / N) * sapply(alphaVec, funFOR, br = brHARKing) + (1 / N) * FORp
+    
+    # Compute the magnitude exaggeration ratios for various values of alpha
+    MERp <- mapply(funMER, alphaVec, FDRp)
+    MERh <- mapply(funMER, alphaVec, FDRh)
+    MERn <- mapply(funMER, alphaVec, FDRn)
     
     # Produce the data frame of the false discovery rates to use in graphing
-    # dataLabels <- c("FDR(p)", "FDR(h)", "FDR(fh)")
-    dataLabels <- c("FDR(h)", "FDR(fh)", "FDR(p)")
-    # data <- c(FDRn, FDRh, FDRp)
-    data <- c(FDRh, FDRn, FDRp)
-    group <- rep(dataLabels, each = length(alphaVec))
-    df <-
+    dataLabelsFDR <- c("FDR(h)", "FDR(fh)", "FDR(p)")
+    dataFDR <- c(FDRh, FDRn, FDRp)
+    group <- rep(dataLabelsFDR, each = length(alphaVec))
+    FDRdf <-
       data.frame(data = matrix(c(
-        rep(alphaVec, times = length(dataLabels)), data, c(group)
+        rep(alphaVec, times = length(dataLabelsFDR)), dataFDR, c(group)
       ), ncol = 3))
-    colnames(df) <- c("Alpha", "FDR", "Group")
-    df$Alpha <- as.numeric(as.character(df$Alpha))
-    df$FDR <- as.numeric(as.character(df$FDR))
-    df$Group <- factor(df$Group, dataLabels)
+    colnames(FDRdf) <- c("Alpha", "FDR", "Group")
+    FDRdf$Alpha <- as.numeric(as.character(FDRdf$Alpha))
+    FDRdf$FDR <- as.numeric(as.character(FDRdf$FDR))
+    FDRdf$Group <- factor(FDRdf$Group, dataLabelsFDR)
+    
+    # Produce the data frame of the false omission rates to use in graphing
+    dataLabelsFOR <- c("FOR(h)", "FOR(fh)", "FOR(p)")
+    dataFOR <- c(FORh, FORn, FORp)
+    group <- rep(dataLabelsFOR, each = length(alphaVec))
+    FORdf <-
+      data.frame(data = matrix(c(
+        rep(alphaVec, times = length(dataLabelsFOR)), dataFOR, c(group)
+      ), ncol = 3))
+    colnames(FORdf) <- c("Alpha", "FOR", "Group")
+    FORdf$Alpha <- as.numeric(as.character(FORdf$Alpha))
+    FORdf$FOR <- as.numeric(as.character(FORdf$FOR))
+    FORdf$Group <- factor(FORdf$Group, dataLabelsFOR)
+    
+    # Produce the data frame of the magnitude exaggeration ratios to use in graphing
+    dataLabelsMER <- c("MER(h)", "MER(fh)", "MER(p)")
+    dataMER <- c(MERh, MERn, MERp)
+    group <- rep(dataLabelsMER, each = length(alphaVec))
+    MERdf <-
+      data.frame(data = matrix(c(
+        rep(alphaVec, times = length(dataLabelsMER)), dataMER, c(group)
+      ), ncol = 3))
+    colnames(MERdf) <- c("Alpha", "MER", "Group")
+    MERdf$Alpha <- as.numeric(as.character(MERdf$Alpha))
+    MERdf$MER <- as.numeric(as.character(MERdf$MER))
+    MERdf$Group <- factor(MERdf$Group, dataLabelsMER)
     
     # OUTPUT the data for the plots
-    return(df)
+    return(list(FDRdf,FORdf,MERdf))
     
   })
   
-  # Plot the reliability of findings for each protocol
-  output$reliabilityPlotOutput <- renderPlot({
-    # Import computed distribution
-    df <- computeReliability()
+  # Output a plot of the false disocovery rates of findings for each protocol
+  output$FDRPlotOutput <- renderPlot({
+    # Import computed distributions
+    FDRdf <- computeReliability()[[1]]
     
     # Make a graph of the false discovery rates as a function of the signfinance threshold
-    G <- ggplot(df) +
+    G <- ggplot(FDRdf) +
       geom_line(
-        data = df,
+        data = FDRdf,
         size = 2,
         aes(
           x = Alpha,
           y = FDR,
-          #linetype = Group,
           color = Group
         ),
         alpha = 1
@@ -131,16 +206,11 @@ shinyServer(function(input, output, session) {
       theme_minimal() +
       ggtitle("") +
       labs(x = expression(paste("Significance Threshold ", alpha)), y = "False Discovery Rate") +
-      # scale_linetype_manual(
-      #   values = c("solid", "solid", "solid"),
-      #   labels = c("Fallback \nHARKing", "Prediction", "Pure \nHARKing")
-      # ) +
       scale_color_manual(
         values = c("orangered2", "#3475BC", "black"),
         labels = c("Pure \nHARKing", "Fallback \nHARKing", "Prediction")
       ) +
       scale_x_continuous(limits = c(0, 1)) +
-      # scale_y_continuous(limits = c(0, 0.3)) +
       theme(
         legend.title = element_blank(),
         legend.position = "right",
@@ -160,6 +230,98 @@ shinyServer(function(input, output, session) {
       )
     # Plot the final graph
     print(G)
+  })
+  
+  # Output a plot of the false omission rates of findings for each protocol
+  output$FORPlotOutput <- renderPlot({
+    # Import computed distributions
+    FORdf <- computeReliability()[[2]]
+
+    # Make a graph of the false omission rates as a function of the signfinance threshold
+    H <- ggplot(FORdf) +
+      geom_line(
+        data = FORdf,
+        size = 2,
+        aes(
+          x = Alpha,
+          y = FOR,
+          color = Group
+        ),
+        alpha = 1
+      ) +
+      theme_minimal() +
+      ggtitle("") +
+      labs(x = expression(paste("Significance Threshold ", alpha)), y = "False Omission Rate") +
+      scale_color_manual(
+        values = c("orangered2", "#3475BC", "black"),
+        labels = c("Pure \nHARKing", "Fallback \nHARKing", "Prediction")
+      ) +
+      scale_x_continuous(limits = c(0, 1)) +
+      theme(
+        legend.title = element_blank(),
+        legend.position = "right",
+        legend.spacing.x = unit(10, 'pt'),
+        legend.spacing.y = unit(30, 'pt'),
+        legend.text = element_text(size = 16, margin = margin(
+          t = 5, b = 5, unit = "pt"
+        )),
+        plot.title = element_text(
+          hjust = 0.5,
+          margin = margin(b = 10, unit = "pt"),
+          lineheight = 1.15
+        ),
+        axis.title.x =  element_text(margin = margin(t = 10, unit = "pt")),
+        axis.title.y =  element_text(margin = margin(r = 20, unit = "pt")),
+        text = element_text(size = 16)
+      )
+    # Plot the final graph
+    print(H)
+  })
+  
+  # Output a plot of the magnitude exaggeration ratio of findings for each protocol
+  output$MERPlotOutput <- renderPlot({
+    # Import computed distributions
+    MERdf <- computeReliability()[[3]]
+    
+    # Make a graph of the magnitude exaggeration ratios as a function of the signfinance threshold
+    I <- ggplot(MERdf) +
+      geom_line(
+        data = MERdf,
+        size = 2,
+        aes(
+          x = Alpha,
+          y = MER,
+          color = Group
+        ),
+        alpha = 1
+      ) +
+      theme_minimal() +
+      ggtitle("") +
+      labs(x = expression(paste("Significance Threshold ", alpha)), y = "Magnitude Exaggeration Ratio") +
+      scale_color_manual(
+        values = c("orangered2", "#3475BC", "black"),
+        labels = c("Pure \nHARKing", "Fallback \nHARKing", "Prediction")
+      ) +
+      scale_x_continuous(limits = c(0, 1)) +
+      theme(
+        legend.title = element_blank(),
+        legend.position = "right",
+        legend.spacing.x = unit(10, 'pt'),
+        legend.spacing.y = unit(30, 'pt'),
+        legend.text = element_text(size = 16, margin = margin(
+          t = 5, b = 5, unit = "pt"
+        )),
+        plot.title = element_text(
+          hjust = 0.5,
+          margin = margin(b = 10, unit = "pt"),
+          lineheight = 1.15
+        ),
+        axis.title.x =  element_text(margin = margin(t = 10, unit = "pt")),
+        axis.title.y =  element_text(margin = margin(r = 20, unit = "pt")),
+        text = element_text(size = 16)
+      )
+    # Plot the final graph
+    print(I)
   })
   
 })

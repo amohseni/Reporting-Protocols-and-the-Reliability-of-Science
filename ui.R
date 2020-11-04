@@ -16,19 +16,35 @@ shinyUI(fluidPage(
   includeCSS("www/style.css"),
   
   # Title
-  titlePanel("Reporting Protocols and the Reliability of Scientific Findings"),
+  titlePanel("The Reliability of Scientific Findings and Reporting Protocols"),
   
   # Load MathJax
   withMathJax(),
   
   fluidRow(style = "background-color:#F2F2F2; margin-top: 30px; margin-bottom: 30px; padding: 10px",
-           column(width = 12,
-                  # Introduction text:
+           column(width = 4,
+                  # Description & The Model
                   div(
                     HTML(
-                      "<strong>Description:</strong> This model explores the effect of various methods of testing and reporting hypotheses on the reliability of scientific findings."
-                    )
-                  ))),
+                      "<strong>Description:</strong> This model explores the effect of various methods of testing and reporting hypotheses on the reliability of scientific findings. </br></br> <strong>The model:</strong> Consider a large population of scientific studies where a study consists of hypothesis tests between up to \\(L \\in \\mathbb{N} \\) probabilistically indepedent pairs of null \\(H_0\\) and alternative \\(H_1\\) hypotheses with a given significance threshold \\(\\alpha \\in (0,1)\\), average statistical power \\(1-\\beta \\in (0,1)\\) (which is itself determined by the average sample size \\(n \\in \\mathbb{N}\\) and effect size \\(d \\in \\mathbb{R}\\) for studies), and underlying prevalence of true hypotheses \\(\\pi \\in (0,1)\\). </br></br></br></br></br></br></br></br> <strong>Reference:</strong> For the full details of the model and findings see Mohseni (2020) <em>'HARKing: From Misdiagnosis to Misprescription'</em> at <a href='http://www.aydinmohseni.com/research'>www.aydinmohseni.com</a>."
+                   ))),
+           column(width = 4,
+                  # Reporting Methods
+                  div(
+                    HTML(
+                      "<strong>False Discovery Rate (FDR):</strong> A false positive occurs when a study yields a significant outcome when the null hypothesis, \\(H_0\\), is true. The false discovery rate is equal to the expected number of false positive outcomes over the number of all significant outcomes. \\[FDR=\\cfrac{Pr(H_0|\\text{significant})}{Pr(\\text{significant})}\\] <strong>False Omission Rate (FOR):</strong> A false negative occurs when a study yields a non-significant outcome when the alternative hypothesis, \\(H_1\\), is true. The false omission rate is equal to the expected number of false negative outcomes over the number of all non-significant outcomes. \\[FOR=\\cfrac{Pr(H_1|\\text{non-significant})}{Pr(\\text{non-significant})}\\] <strong>Magnitude Exaggeration Ratio  (MER):</strong> A reported effect size, \\(\\hat{d}\\), is exaggerated when it is larger than the true effect size, \\(d\\). The magnitude exaggeration ratio is equal to the expected ratio of this exaggeration. \\[MER=\\mathbb{E}[ \\hat{d}/d]\\]"
+                    ))),
+            column(width = 4,
+                   # False Discovery and False Omission Rate text:
+                   div(
+                     HTML(
+                       "<strong>Reporting Protocols:</strong> Given a parameterization of a population of studies and the preceding measures of the (un)reliability of findings, we can consider the effects of alternative protocols for selecting and submitting hypotheses to test for the reliability of scientific findings. Call these <em>reporting protocols</em>: 
+<ul> </br>
+  <li><strong>Prediction:</strong> Prior to observing the data, choose a hypothesis and report it if it is statistically significant. </li> </br>
+  <li><strong>Pure HARKing:</strong> After obseving the data, select a hypothesis to report from among those that are statistically signficant.</li> </br>
+  <li><strong>Fallback HARKing:</strong> Prior to observing the data, choose a hypothesis and report it if it is statistically significant; otherwise select a hypothesis to report from among the auxialliary hypotheses that are signficant. </li>
+</ul>"                       
+                     )))),  
   
   # Sidebar for Parameter Input
   sidebarLayout(
@@ -89,8 +105,12 @@ shinyUI(fluidPage(
     # Main Panel with Stationary Distribution + Simulation & Stats Panels
     mainPanel(
       fluidRow(
-        style = "padding-left: 20px; text-align: center;",
-        plotOutput("reliabilityPlotOutput", height = "600px")
+        style = "padding-left: 20px; padding-bottom: 40px; text-align: center;",
+        tabsetPanel(type = "tabs",
+                    tabPanel("False Discovery Rate (FDR)", plotOutput("FDRPlotOutput", height = "600px")),
+                    tabPanel("False Omission Rate (FOR)", plotOutput("FORPlotOutput", height = "600px")),
+                    tabPanel("Magnitude Exaggeration Ratio (MER)", plotOutput("MERPlotOutput", height = "600px"))
+        )
       )
     )
   )
