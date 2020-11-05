@@ -12,7 +12,7 @@ Sys.setlocale("LC_ALL", "fr_FR.UTF-8")
 
 # Define UI for application
 shinyUI(fluidPage(
-  # CSS for visual
+  # CSS for visuals
   includeCSS("www/style.css"),
   
   # Title
@@ -26,7 +26,7 @@ shinyUI(fluidPage(
                   # Description & The Model
                   div(
                     HTML(
-                      "<strong>Description:</strong> This model explores the effect of various methods of testing and reporting hypotheses on the reliability of scientific findings. </br></br> <strong>The model:</strong> Consider a large population of scientific studies where a study consists of hypothesis tests between up to \\(L \\in \\mathbb{N} \\) probabilistically indepedent pairs of null \\(H_0\\) and alternative \\(H_1\\) hypotheses with a given significance threshold \\(\\alpha \\in (0,1)\\), average statistical power \\(1-\\beta \\in (0,1)\\) (which is itself determined by the average sample size \\(n \\in \\mathbb{N}\\) and effect size \\(d \\in \\mathbb{R}\\) for studies), and underlying prevalence of true hypotheses \\(\\pi \\in (0,1)\\). </br></br></br></br></br></br></br></br> <strong>Reference:</strong> For the full details of the model and findings see Mohseni (2020) <em>'HARKing: From Misdiagnosis to Misprescription'</em> at <a href='http://www.aydinmohseni.com/research'>www.aydinmohseni.com</a>."
+                      "<strong>Description:</strong> This model explores the effect of various methods of testing and reporting hypotheses on the reliability of scientific findings. </br></br> <strong>The model:</strong> Consider a large population of scientific studies where a study consists of hypothesis tests between up to \\(L \\in \\mathbb{N} \\) probabilistically indepedent pairs of null \\(H_0\\) and alternative \\(H_1\\) hypotheses with a given significance threshold \\(\\alpha \\in (0,1)\\), average statistical power \\(1-\\beta \\in (0,1)\\) (which is itself determined by the average sample size \\(n \\in \\mathbb{N}\\) and effect size \\(d \\in \\mathbb{R}\\) for studies), and underlying prevalence of true hypotheses \\(\\pi \\in (0,1)\\). </br></br></br></br> <strong>Reference:</strong> For the full details of the model and findings see Mohseni (2020) <em>'HARKing: From Misdiagnosis to Misprescription'</em> at <a href='http://www.aydinmohseni.com/research'>www.aydinmohseni.com</a>.</br></br> <strong>Open-Source Code:</strong> All the <a href='https://shiny.rstudio.com/'>R</a> and <a href='https://www.r-project.org/'>Shiny</a> code for this project is available at <a href='https://github.com/amohseni/Reporting-Protocols-and-the-Reliability-of-Science'>www.github.com/amohseni</a>."
                    ))),
            column(width = 4,
                   # Reporting Methods
